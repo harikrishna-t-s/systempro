@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', async () => {
     // Admin Cryptographic Verification Token (Salted SHA-256 of passphrase: "admin")
-    const AUTH_HASH = "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918";
+    const AUTH_HASH = "a580cbba52ad4de33fb48d67a528ec8d7c619a3d4de58032bee5fb722b24bd4b";
     
     let state = {
         entries: [],
