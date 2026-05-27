@@ -3,25 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SYSTEMPRO // Core Architectural System</title>
-    <link rel="stylesheet" href="public/css/main.css">
+    <title>SYSTEMPRO // Core Architectural Workspace</title>
+    <link rel="stylesheet" href="assets/css/main.css">
 </head>
 <body>
+
+    <div id="authOverlay" class="auth-overlay hidden">
+        <div class="auth-modal">
+            <div class="auth-title">ADMINISTRATOR TOKEN ACCESS</div>
+            <form id="authForm">
+                <input type="password" id="authKey" class="form-control" placeholder="KEY_PHRASE" style="text-align: center; margin-bottom: 16px;" required>
+                <div style="display: flex; gap: 8px; justify-content: center;">
+                    <button type="button" class="btn btn-secondary" id="authCancel">ABORT</button>
+                    <button type="submit" class="btn btn-primary">VERIFY</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <header class="sys-header">
         <div class="brand-zone">
             <div class="logo">SYSTEMPRO</div>
-            <div class="environment-badge">production.engine.v1</div>
+            <div class="environment-badge">EDGE.ROUTER.V2</div>
         </div>
         <div class="meta-controls">
             <div class="system-status">
-                <span class="status-dot"></span>
-                <span id="statusText">SYS_STATUS: LOADING_DB...</span>
+                <span id="statusDot" class="status-dot locked"></span>
+                <span id="statusText">SYS_STATUS: INITIALIZING...</span>
             </div>
             <button class="btn btn-secondary" id="btnExport">EXPORT_DB</button>
-            <button class="btn btn-secondary" id="btnImport">IMPORT_DB</button>
-            <input type="file" id="fileImport" class="hidden" accept=".json">
-            <button class="btn btn-primary" id="btnNewEntry">+ NEW_ENTRY</button>
+            <span id="adminControls" class="hidden" style="display: flex; gap: 12px;">
+                <button class="btn btn-secondary" id="btnImport">IMPORT_DB</button>
+                <input type="file" id="fileImport" class="hidden" accept=".json">
+            </span>
+            <button class="btn btn-secondary" id="btnAuthToggle">LOGIN_ADMIN</button>
+            <span id="writeControls" class="hidden">
+                <button class="btn btn-primary" id="btnNewEntry">+ NEW_ENTRY</button>
+            </span>
         </div>
     </header>
 
@@ -29,9 +47,8 @@
         
         <aside class="sidebar">
             <div class="search-box">
-                <input type="text" id="searchInput" class="search-input" placeholder="grep / filter strings..." />
+                <input type="text" id="searchInput" class="search-input" placeholder="grep / filter metadata streams..." />
             </div>
-            
             <div class="filter-tags" id="filterTags">
                 <div class="tag-pill active" data-filter="all_systems">all_systems</div>
                 <div class="tag-pill" data-filter="distributed">distributed</div>
@@ -39,37 +56,51 @@
                 <div class="tag-pill" data-filter="telemetry">telemetry</div>
                 <div class="tag-pill" data-filter="compute">compute</div>
             </div>
-
-            <div class="question-list" id="questionList">
-                </div>
+            <div class="question-list" id="questionList"></div>
         </aside>
 
         <main class="canvas-panel" id="viewPanel">
             <article class="doc-container">
                 <header class="doc-header">
                     <div class="doc-metadata-row">
-                        <div class="meta-item"><span>ID:</span> <span id="docId">---</span></div>
-                        <div class="meta-item"><span>LAST_MODIFIED:</span> <span id="docModified">---</span></div>
-                        <div class="meta-item"><span>ACCESS:</span> READ_WRITE_OWNER</div>
+                        <div class="meta-item"><span>SPEC_ID:</span> <span id="docId">---</span></div>
+                        <div class="meta-item"><span>LAST_UPSTREAM_COMMIT:</span> <span id="docModified">---</span></div>
                     </div>
-                    <h1 class="doc-title" id="docTitle">Loading Document Pipeline Configuration...</h1>
+                    <h1 class="doc-title" id="docTitle">System Loading...</h1>
                     <div class="doc-tags" id="docTags"></div>
                 </header>
 
-                <section class="doc-section">
-                    <h2>01. Architectural Context & System Objectives</h2>
-                    <p id="docContext"></p>
-                </section>
+                <div class="doc-body">
+                    <section class="doc-section">
+                        <h2>01. Architectural Context & Scope Definition</h2>
+                        <p id="docContext"></p>
+                    </section>
 
-                <section class="doc-section">
-                    <h2>02. Component Topology Mapping</h2>
-                    <pre class="architecture-diagram" id="docTopology"></pre>
-                </section>
+                    <section class="doc-section hidden">
+                        <h2>02. Component Topology Mapping</h2>
+                        <pre class="architecture-diagram" id="docTopology"></pre>
+                    </section>
 
-                <section class="doc-section">
-                    <h2>03. Execution Tradeoffs & Operational Boundaries</h2>
-                    <p id="docTradeoffs"></p>
-                </section>
+                    <section class="doc-section hidden">
+                        <h2>03. Execution Tradeoffs & Bound Analysis</h2>
+                        <p id="docTradeoffs"></p>
+                    </section>
+
+                    <section class="doc-section hidden">
+                        <h2>04. Observability Mapping & Telemetry SLIs</h2>
+                        <p id="docObservability"></p>
+                    </section>
+
+                    <section class="doc-section hidden">
+                        <h2>05. Progressive Deployment & Resiliency Routines</h2>
+                        <p id="docDeployment"></p>
+                    </section>
+
+                    <section class="doc-section hidden">
+                        <h2>06. Threat Boundaries & Security Isolation</h2>
+                        <p id="docSecurity"></p>
+                    </section>
+                </div>
 
                 <div class="form-actions" style="border: none;">
                     <button class="btn btn-secondary" id="btnEdit">EDIT_SPEC</button>
@@ -80,21 +111,17 @@
 
         <main class="canvas-panel hidden" id="formPanel">
             <div class="doc-container">
-                <div class="doc-header">
-                    <h1 class="doc-title">Engineering Specification Sheet</h1>
-                </div>
-                
+                <div class="doc-header"><h1 class="doc-title">Engineering Specification Sheet</h1></div>
                 <form id="entryForm">
                     <input type="hidden" id="formIsEdit" value="false">
-                    
                     <div class="form-group" style="display: flex; gap: 16px;">
                         <div style="flex: 1;">
                             <label for="formId">System ID Spec</label>
-                            <input type="text" id="formId" class="form-control" placeholder="e.g., SYS-001" required>
+                            <input type="text" id="formId" class="form-control" required>
                         </div>
                         <div style="flex: 2;">
-                            <label for="formCategory">Core Framework Target Zone</label>
-                            <select id="formCategory" class="form-control" style="background-color: var(--bg-secondary);">
+                            <label for="formCategory">Core Target Zone</label>
+                            <select id="formCategory" class="form-control">
                                 <option value="distributed">Distributed Infrastructure Design</option>
                                 <option value="storage">Distributed Storage & Cache Systems</option>
                                 <option value="telemetry">High-Throughput Telemetry & Observability</option>
@@ -102,32 +129,38 @@
                             </select>
                         </div>
                     </div>
-
                     <div class="form-group">
-                        <label for="formTitle">System Architecture Title</label>
-                        <input type="text" id="formTitle" class="form-control" placeholder="e.g., Distributed Global Real-time Messaging Bus" required>
+                        <label for="formTitle">Architecture Title</label>
+                        <input type="text" id="formTitle" class="form-control" required>
                     </div>
-
                     <div class="form-group">
-                        <label for="formTags">Categorization Keywords (Comma Delimited)</label>
-                        <input type="text" id="formTags" class="form-control" placeholder="e.g., replication, raft, low-latency">
+                        <label for="formTags">Categorization Keywords</label>
+                        <input type="text" id="formTags" class="form-control">
                     </div>
-
                     <div class="form-group">
-                        <label for="formContext">01. Architectural Context & System Objectives</label>
-                        <textarea id="formContext" rows="6" class="form-control" placeholder="Identify scale vectors, throughput parameters, and operational constraints..."></textarea>
+                        <label for="formContext">01. Architectural Context & Scope Definition</label>
+                        <textarea id="formContext" rows="4" class="form-control"></textarea>
                     </div>
-
                     <div class="form-group">
-                        <label for="formTopology">02. Component Topology Mapping (ASCII Diagram Layout)</label>
-                        <textarea id="formTopology" rows="8" class="form-control" placeholder="[Component A] ---> [Load Balancer] ---> [Worker Node Ring]"></textarea>
+                        <label for="formTopology">02. Component Topology Mapping (ASCII)</label>
+                        <textarea id="formTopology" rows="5" class="form-control"></textarea>
                     </div>
-
                     <div class="form-group">
-                        <label for="formTradeoffs">03. Execution Tradeoffs & Operational Boundaries</label>
-                        <textarea id="formTradeoffs" rows="5" class="form-control" placeholder="Evaluate CAP theorems limits, consistency constraints, data loss thresholds..."></textarea>
+                        <label for="formTradeoffs">03. Execution Tradeoffs & Bound Analysis</label>
+                        <textarea id="formTradeoffs" rows="4" class="form-control"></textarea>
                     </div>
-
+                    <div class="form-group">
+                        <label for="formObservability">04. Observability Mapping & Telemetry SLIs</label>
+                        <textarea id="formObservability" rows="4" class="form-control" placeholder="Isolate monitoring telemetry paths, structural counters..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="formDeployment">05. Progressive Deployment & Resiliency Routines</label>
+                        <textarea id="formDeployment" rows="4" class="form-control" placeholder="Canary rollouts, fallback patterns, runbook overrides..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="formSecurity">06. Threat Boundaries & Security Isolation</label>
+                        <textarea id="formSecurity" rows="4" class="form-control" placeholder="Network isolation parameters, encryption specifications..."></textarea>
+                    </div>
                     <div class="form-actions">
                         <button type="button" class="btn btn-secondary" id="cancelForm">ABORT</button>
                         <button type="submit" class="btn btn-primary" style="margin-left: 8px;">COMMIT_SPEC</button>
@@ -135,10 +168,9 @@
                 </form>
             </div>
         </main>
-
     </div>
 
-    <script src="public/js/storage.js"></script>
-    <script src="public/js/app.js"></script>
+    <script src="assets/js/storage.js"></script>
+    <script src="assets/js/app.js"></script>
 </body>
 </html>
