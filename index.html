@@ -108,6 +108,23 @@
                     <button class="btn btn-secondary" id="btnEdit">EDIT_SPEC</button>
                     <button class="btn btn-danger" id="btnDelete" style="margin-left: 8px;">PURGE_ENTRY</button>
                 </div>
+
+                <div class="comments-divider"></div>
+                <section class="comments-section" id="commentsSection">
+                    <h2 class="comments-title">07. COLLABORATIVE STREAM & DISCUSSIONS</h2>
+                    
+                    <div class="comment-author-setup" id="commentAuthorSetup">
+                        <label for="commentAuthor">USER_HANDLE:</label>
+                        <input type="text" id="commentAuthor" class="form-control author-input" placeholder="anonymous_dev" value="anonymous_dev">
+                    </div>
+
+                    <div id="commentList" class="comment-list"></div>
+
+                    <form id="commentForm" class="comment-form">
+                        <textarea id="commentInput" class="form-control comment-input" rows="2" placeholder="Post a comment or inquiry on this spec..." required></textarea>
+                        <button type="submit" class="btn btn-primary" id="btnPostComment">POST_COMMENT</button>
+                    </form>
+                </section>
             </article>
         </main>
 

@@ -63,7 +63,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         formObservability: document.getElementById('formObservability'),
         formDeployment: document.getElementById('formDeployment'),
         formSecurity: document.getElementById('formSecurity'),
-        cancelForm: document.getElementById('cancelForm')
+        cancelForm: document.getElementById('cancelForm'),
+        
+        // Comments Elements
+        commentList: document.getElementById('commentList'),
+        commentForm: document.getElementById('commentForm'),
+        commentInput: document.getElementById('commentInput'),
+        commentAuthor: document.getElementById('commentAuthor'),
+        commentAuthorSetup: document.getElementById('commentAuthorSetup'),
+        commentsSection: document.getElementById('commentsSection')
     };
 
     // Crypto Helper Engine
@@ -82,6 +90,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             el.writeControls.classList.remove('hidden');
             el.btnEdit.classList.remove('hidden');
             el.btnDelete.classList.remove('hidden');
+            if (el.commentAuthorSetup) {
+                el.commentAuthorSetup.classList.add('hidden');
+                el.commentAuthor.value = "ADMIN";
+            }
         } else {
             el.btnAuthToggle.textContent = "LOGIN_ADMIN";
             el.statusDot.classList.add('locked');
@@ -89,6 +101,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             el.writeControls.classList.add('hidden');
             el.btnEdit.classList.add('hidden');
             el.btnDelete.classList.add('hidden');
+            if (el.commentAuthorSetup) {
+                el.commentAuthorSetup.classList.remove('hidden');
+                el.commentAuthor.value = "anonymous_dev";
+            }
             // If user was viewing form panel, drop back safely to read-only view canvas
             el.formPanel.classList.add('hidden');
             el.viewPanel.classList.remove('hidden');
@@ -112,6 +128,134 @@ document.addEventListener('DOMContentLoaded', async () => {
             errorEl.textContent = '';
             errorEl.style.display = 'none';
         }
+    };
+
+    // Collaborative Discussion Stream Helpers
+    const escapeHtml = (unsafe) => {
+        if (!unsafe) return '';
+        return unsafe
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    };
+
+    const renderComments = (entry) => {
+        el.commentList.innerHTML = '';
+        const comments = entry.comments || [];
+        
+        if (comments.length === 0) {
+            el.commentList.innerHTML = '<div style="font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); text-align: center; padding: 24px 0;">NO_COMMUNICATION_THREADS_FOUND</div>';
+            return;
+        }
+
+        comments.forEach(comment => {
+            const item = document.createElement('div');
+            item.className = 'comment-item';
+            item.id = `item-${comment.id}`;
+            
+            const date = new Date(comment.timestamp).toLocaleString();
+            const badgeClass = comment.isAdmin ? 'comment-badge admin' : 'comment-badge';
+            
+            let repliesHTML = '';
+            if (comment.replies && comment.replies.length > 0) {
+                repliesHTML = `<div class="reply-list">`;
+                comment.replies.forEach(reply => {
+                    const rDate = new Date(reply.timestamp).toLocaleString();
+                    const rBadgeClass = reply.isAdmin ? 'comment-badge admin' : 'comment-badge';
+                    repliesHTML += `
+                        <div class="reply-item">
+                             <div class="comment-header">
+                                 <div class="comment-meta">
+                                     <span class="comment-author">${escapeHtml(reply.author)}</span>
+                                     <span class="${rBadgeClass}">${reply.isAdmin ? 'ADMIN' : 'DEVELOPER'}</span>
+                                 </div>
+                                 <span class="comment-time">${rDate}</span>
+                             </div>
+                             <div class="comment-body">${escapeHtml(reply.text)}</div>
+                        </div>
+                    `;
+                });
+                repliesHTML += `</div>`;
+            }
+
+            item.innerHTML = `
+                 <div class="comment-header">
+                     <div class="comment-meta">
+                         <span class="comment-author">${escapeHtml(comment.author)}</span>
+                         <span class="${badgeClass}">${comment.isAdmin ? 'ADMIN' : 'DEVELOPER'}</span>
+                     </div>
+                     <span class="comment-time">${date}</span>
+                 </div>
+                 <div class="comment-body">${escapeHtml(comment.text)}</div>
+                 <div class="comment-actions">
+                     <button class="comment-action-btn btn-reply" data-comment-id="${comment.id}">[ REPLY ]</button>
+                 </div>
+                 <div id="replyFormContainer-${comment.id}"></div>
+                 ${repliesHTML}
+            `;
+            
+            el.commentList.appendChild(item);
+        });
+
+        // Attach reply event listeners
+        const replyButtons = el.commentList.querySelectorAll('.btn-reply');
+        replyButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const commentId = e.target.getAttribute('data-comment-id');
+                showReplyForm(entry, commentId);
+            });
+        });
+    };
+
+    const showReplyForm = (entry, commentId) => {
+        const container = document.getElementById(`replyFormContainer-${commentId}`);
+        if (!container) return;
+        
+        if (container.querySelector('.reply-form')) return;
+
+        const form = document.createElement('form');
+        form.className = 'reply-form';
+        form.innerHTML = `
+            <textarea class="form-control reply-input" rows="2" placeholder="Write a response..." required></textarea>
+            <div class="reply-form-actions">
+                <button type="button" class="btn btn-secondary btn-cancel-reply">ABORT</button>
+                <button type="submit" class="btn btn-primary">SEND_REPLY</button>
+            </div>
+        `;
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const textEl = form.querySelector('.reply-input');
+            const text = textEl.value.trim();
+            if (!text) return;
+
+            const comments = entry.comments || [];
+            const targetComment = comments.find(c => c.id === commentId);
+            if (targetComment) {
+                if (!targetComment.replies) targetComment.replies = [];
+                
+                const author = state.isAdmin ? "ADMIN" : (el.commentAuthor.value.trim() || "anonymous_dev");
+                targetComment.replies.push({
+                     id: 'r_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+                     author: author,
+                     isAdmin: state.isAdmin,
+                     text: text,
+                     timestamp: new Date().toISOString()
+                });
+
+                await window.storageEngine.saveEntry(entry);
+                renderComments(entry);
+            }
+        });
+
+        form.querySelector('.btn-cancel-reply').addEventListener('click', () => {
+            form.remove();
+        });
+
+        container.appendChild(form);
+        form.querySelector('.reply-input').focus();
     };
 
     // Initialize Mermaid if available
@@ -303,6 +447,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             span.textContent = t;
             el.docTags.appendChild(span);
         });
+
+        if (el.commentsSection) el.commentsSection.classList.remove('hidden');
+        renderComments(entry);
     };
 
     const clearDocumentCanvas = () => {
@@ -314,6 +461,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         el.docObservability.parentElement.classList.add('hidden');
         el.docDeployment.parentElement.classList.add('hidden');
         el.docSecurity.parentElement.classList.add('hidden');
+        if (el.commentsSection) el.commentsSection.classList.add('hidden');
     };
 
     // UI Input Routers
@@ -444,6 +592,31 @@ document.addEventListener('DOMContentLoaded', async () => {
             } catch (err) { alert("Data structural trace initialization fault."); }
         };
         if (e.target.files[0]) reader.readAsText(e.target.files[0]);
+    });
+
+    el.commentForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const entry = state.entries.find(ent => ent.id === state.selectedId);
+        if (!entry) return;
+
+        const text = el.commentInput.value.trim();
+        if (!text) return;
+
+        if (!entry.comments) entry.comments = [];
+
+        const author = state.isAdmin ? "ADMIN" : (el.commentAuthor.value.trim() || "anonymous_dev");
+        entry.comments.push({
+            id: 'c_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+            author: author,
+            isAdmin: state.isAdmin,
+            text: text,
+            timestamp: new Date().toISOString(),
+            replies: []
+        });
+
+        await window.storageEngine.saveEntry(entry);
+        el.commentInput.value = '';
+        renderComments(entry);
     });
 
     evaluateRoleUI();
