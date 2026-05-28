@@ -60,58 +60,73 @@
             <div class="question-list" id="questionList"></div>
         </aside>
 
-        <main class="canvas-panel" id="viewPanel">
-            <article class="doc-container">
-                <header class="doc-header">
-                    <div class="doc-metadata-row">
-                        <div class="meta-item"><span>SPEC_ID:</span> <span id="docId">---</span></div>
-                        <div class="meta-item"><span>LAST_UPSTREAM_COMMIT:</span> <span id="docModified">---</span></div>
+        <main class="canvas-panel" id="viewPanel" style="padding: 0; overflow: hidden;">
+            <div id="welcomeSplash" class="welcome-splash">
+                <div class="splash-logo">SYSTEMPRO</div>
+                <div class="splash-subtitle">EDGE.ROUTER.V2 // ARCHITECTURE INDEX</div>
+                <div class="splash-select-zone">
+                    <label for="splashSelect">SELECT_SPECIFICATION_STREAM:</label>
+                    <select id="splashSelect" class="form-control splash-select">
+                        <option value="" disabled selected>-- SELECT SPEC --</option>
+                    </select>
+                </div>
+                <div class="splash-hint">> SELECT_METADATA_STREAM_FROM_SIDEBAR_TO_DECRYPT_SPEC</div>
+            </div>
+            <div class="view-workspace hidden" id="viewWorkspace">
+                <article class="doc-container">
+                    <div style="max-width: 760px; width: 100%;">
+                        <header class="doc-header">
+                            <div class="doc-metadata-row">
+                                <div class="meta-item"><span>SPEC_ID:</span> <span id="docId">---</span></div>
+                                <div class="meta-item"><span>AUTHOR:</span> <span id="docAuthor">---</span></div>
+                                <div class="meta-item"><span>LAST_UPSTREAM_COMMIT:</span> <span id="docModified">---</span></div>
+                            </div>
+                            <h1 class="doc-title" id="docTitle">System Loading...</h1>
+                            <div class="doc-tags" id="docTags"></div>
+                        </header>
+
+                        <div class="doc-body">
+                            <section class="doc-section">
+                                <h2>01. Architectural Context & Scope Definition</h2>
+                                <p id="docContext"></p>
+                            </section>
+
+                            <section class="doc-section hidden">
+                                <h2>02. Component Topology Mapping</h2>
+                                <pre class="architecture-diagram" id="docTopology"></pre>
+                                <div id="docTopologyMermaid" class="mermaid-container hidden"></div>
+                            </section>
+
+                            <section class="doc-section hidden">
+                                <h2>03. Execution Tradeoffs & Bound Analysis</h2>
+                                <p id="docTradeoffs"></p>
+                            </section>
+
+                            <section class="doc-section hidden">
+                                <h2>04. Observability Mapping & Telemetry SLIs</h2>
+                                <p id="docObservability"></p>
+                            </section>
+
+                            <section class="doc-section hidden">
+                                <h2>05. Progressive Deployment & Resiliency Routines</h2>
+                                <p id="docDeployment"></p>
+                            </section>
+
+                            <section class="doc-section hidden">
+                                <h2>06. Threat Boundaries & Security Isolation</h2>
+                                <p id="docSecurity"></p>
+                            </section>
+                        </div>
+
+                        <div class="form-actions" style="border: none;">
+                            <button class="btn btn-secondary" id="btnEdit">EDIT_SPEC</button>
+                            <button class="btn btn-danger" id="btnDelete" style="margin-left: 8px;">PURGE_ENTRY</button>
+                        </div>
                     </div>
-                    <h1 class="doc-title" id="docTitle">System Loading...</h1>
-                    <div class="doc-tags" id="docTags"></div>
-                </header>
+                </article>
 
-                <div class="doc-body">
-                    <section class="doc-section">
-                        <h2>01. Architectural Context & Scope Definition</h2>
-                        <p id="docContext"></p>
-                    </section>
-
-                    <section class="doc-section hidden">
-                        <h2>02. Component Topology Mapping</h2>
-                        <pre class="architecture-diagram" id="docTopology"></pre>
-                        <div id="docTopologyMermaid" class="mermaid-container hidden"></div>
-                    </section>
-
-                    <section class="doc-section hidden">
-                        <h2>03. Execution Tradeoffs & Bound Analysis</h2>
-                        <p id="docTradeoffs"></p>
-                    </section>
-
-                    <section class="doc-section hidden">
-                        <h2>04. Observability Mapping & Telemetry SLIs</h2>
-                        <p id="docObservability"></p>
-                    </section>
-
-                    <section class="doc-section hidden">
-                        <h2>05. Progressive Deployment & Resiliency Routines</h2>
-                        <p id="docDeployment"></p>
-                    </section>
-
-                    <section class="doc-section hidden">
-                        <h2>06. Threat Boundaries & Security Isolation</h2>
-                        <p id="docSecurity"></p>
-                    </section>
-                </div>
-
-                <div class="form-actions" style="border: none;">
-                    <button class="btn btn-secondary" id="btnEdit">EDIT_SPEC</button>
-                    <button class="btn btn-danger" id="btnDelete" style="margin-left: 8px;">PURGE_ENTRY</button>
-                </div>
-
-                <div class="comments-divider"></div>
-                <section class="comments-section" id="commentsSection">
-                    <h2 class="comments-title">07. COLLABORATIVE STREAM & DISCUSSIONS</h2>
+                <aside class="comments-sidebar" id="commentsSection">
+                    <h2 class="comments-title">COLLABORATIVE STREAM & DISCUSSIONS</h2>
                     
                     <div class="comment-author-setup" id="commentAuthorSetup">
                         <label for="commentAuthor">USER_HANDLE:</label>
@@ -124,8 +139,8 @@
                         <textarea id="commentInput" class="form-control comment-input" rows="2" placeholder="Post a comment or inquiry on this spec..." required></textarea>
                         <button type="submit" class="btn btn-primary" id="btnPostComment">POST_COMMENT</button>
                     </form>
-                </section>
-            </article>
+                </aside>
+            </div>
         </main>
 
         <main class="canvas-panel hidden" id="formPanel">
@@ -153,9 +168,15 @@
                         <label for="formTitle">Architecture Title</label>
                         <input type="text" id="formTitle" class="form-control" required>
                     </div>
-                    <div class="form-group">
-                        <label for="formTags">Categorization Keywords</label>
-                        <input type="text" id="formTags" class="form-control">
+                    <div class="form-group" style="display: flex; gap: 16px;">
+                        <div style="flex: 1;">
+                            <label for="formTags">Categorization Keywords</label>
+                            <input type="text" id="formTags" class="form-control">
+                        </div>
+                        <div style="flex: 1;">
+                            <label for="formAuthor">Author / Owner</label>
+                            <input type="text" id="formAuthor" class="form-control" placeholder="ADMIN">
+                        </div>
                     </div>
                     <div class="form-group">
                         <label for="formContext">01. Architectural Context & Scope Definition</label>

@@ -71,7 +71,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         commentInput: document.getElementById('commentInput'),
         commentAuthor: document.getElementById('commentAuthor'),
         commentAuthorSetup: document.getElementById('commentAuthorSetup'),
-        commentsSection: document.getElementById('commentsSection')
+        commentsSection: document.getElementById('commentsSection'),
+
+        // Splash screen and author element references
+        welcomeSplash: document.getElementById('welcomeSplash'),
+        viewWorkspace: document.getElementById('viewWorkspace'),
+        formAuthor: document.getElementById('formAuthor'),
+        docAuthor: document.getElementById('docAuthor'),
+        splashSelect: document.getElementById('splashSelect')
     };
 
     // Crypto Helper Engine
@@ -141,6 +148,96 @@ document.addEventListener('DOMContentLoaded', async () => {
             .replace(/'/g, "&#039;");
     };
 
+    const deleteCommentRecursive = (nodes, targetId) => {
+        for (let i = 0; i < nodes.length; i++) {
+            if (nodes[i].id === targetId) {
+                nodes.splice(i, 1);
+                return true;
+            }
+            if (nodes[i].replies && nodes[i].replies.length > 0) {
+                const found = deleteCommentRecursive(nodes[i].replies, targetId);
+                if (found) return true;
+            }
+        }
+        return false;
+    };
+
+    const insertReplyRecursive = (nodes, targetId, newReply) => {
+        for (let i = 0; i < nodes.length; i++) {
+            if (nodes[i].id === targetId) {
+                if (!nodes[i].replies) nodes[i].replies = [];
+                nodes[i].replies.push(newReply);
+                return true;
+            }
+            if (nodes[i].replies && nodes[i].replies.length > 0) {
+                const found = insertReplyRecursive(nodes[i].replies, targetId, newReply);
+                if (found) return true;
+            }
+        }
+        return false;
+    };
+
+    const createCommentElement = (comment, entry) => {
+        const div = document.createElement('div');
+        div.className = 'comment-item';
+        div.id = `item-${comment.id}`;
+
+        const date = new Date(comment.timestamp).toLocaleString();
+        const badgeClass = comment.isAdmin ? 'comment-badge admin' : 'comment-badge';
+        
+        const deleteBtnHTML = state.isAdmin 
+            ? `<button class="comment-action-btn btn-delete-comment" data-comment-id="${comment.id}" style="color: var(--accent-error);">[ PURGE ]</button>`
+            : '';
+
+        div.innerHTML = `
+            <div class="comment-header">
+                <div class="comment-meta">
+                    <span class="comment-author">${escapeHtml(comment.author)}</span>
+                    <span class="${badgeClass}">${comment.isAdmin ? 'ADMIN' : 'DEVELOPER'}</span>
+                </div>
+                <span class="comment-time">${date}</span>
+            </div>
+            <div class="comment-body">${escapeHtml(comment.text)}</div>
+            <div class="comment-actions">
+                <button class="comment-action-btn btn-reply" data-comment-id="${comment.id}">[ REPLY ]</button>
+                ${deleteBtnHTML}
+            </div>
+            <div id="replyFormContainer-${comment.id}"></div>
+            <div class="reply-list" id="replies-${comment.id}"></div>
+        `;
+
+        const repliesContainer = div.querySelector(`#replies-${comment.id}`);
+
+        if (comment.replies && comment.replies.length > 0) {
+            repliesContainer.style.display = 'flex';
+            comment.replies.forEach(child => {
+                const childEl = createCommentElement(child, entry);
+                repliesContainer.appendChild(childEl);
+            });
+        } else {
+            repliesContainer.style.display = 'none';
+        }
+
+        // Hook events
+        div.querySelector('.btn-reply').addEventListener('click', (e) => {
+            e.stopPropagation();
+            showReplyForm(entry, comment.id);
+        });
+
+        if (state.isAdmin) {
+            div.querySelector('.btn-delete-comment').addEventListener('click', async (e) => {
+                e.stopPropagation();
+                if (confirm("Confirm removal of this thread branch?")) {
+                    deleteCommentRecursive(entry.comments, comment.id);
+                    await window.storageEngine.saveEntry(entry);
+                    renderComments(entry);
+                }
+            });
+        }
+
+        return div;
+    };
+
     const renderComments = (entry) => {
         el.commentList.innerHTML = '';
         const comments = entry.comments || [];
@@ -151,61 +248,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         comments.forEach(comment => {
-            const item = document.createElement('div');
-            item.className = 'comment-item';
-            item.id = `item-${comment.id}`;
-            
-            const date = new Date(comment.timestamp).toLocaleString();
-            const badgeClass = comment.isAdmin ? 'comment-badge admin' : 'comment-badge';
-            
-            let repliesHTML = '';
-            if (comment.replies && comment.replies.length > 0) {
-                repliesHTML = `<div class="reply-list">`;
-                comment.replies.forEach(reply => {
-                    const rDate = new Date(reply.timestamp).toLocaleString();
-                    const rBadgeClass = reply.isAdmin ? 'comment-badge admin' : 'comment-badge';
-                    repliesHTML += `
-                        <div class="reply-item">
-                             <div class="comment-header">
-                                 <div class="comment-meta">
-                                     <span class="comment-author">${escapeHtml(reply.author)}</span>
-                                     <span class="${rBadgeClass}">${reply.isAdmin ? 'ADMIN' : 'DEVELOPER'}</span>
-                                 </div>
-                                 <span class="comment-time">${rDate}</span>
-                             </div>
-                             <div class="comment-body">${escapeHtml(reply.text)}</div>
-                        </div>
-                    `;
-                });
-                repliesHTML += `</div>`;
-            }
-
-            item.innerHTML = `
-                 <div class="comment-header">
-                     <div class="comment-meta">
-                         <span class="comment-author">${escapeHtml(comment.author)}</span>
-                         <span class="${badgeClass}">${comment.isAdmin ? 'ADMIN' : 'DEVELOPER'}</span>
-                     </div>
-                     <span class="comment-time">${date}</span>
-                 </div>
-                 <div class="comment-body">${escapeHtml(comment.text)}</div>
-                 <div class="comment-actions">
-                     <button class="comment-action-btn btn-reply" data-comment-id="${comment.id}">[ REPLY ]</button>
-                 </div>
-                 <div id="replyFormContainer-${comment.id}"></div>
-                 ${repliesHTML}
-            `;
-            
-            el.commentList.appendChild(item);
-        });
-
-        // Attach reply event listeners
-        const replyButtons = el.commentList.querySelectorAll('.btn-reply');
-        replyButtons.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const commentId = e.target.getAttribute('data-comment-id');
-                showReplyForm(entry, commentId);
-            });
+            const commentEl = createCommentElement(comment, entry);
+            el.commentList.appendChild(commentEl);
         });
     };
 
@@ -232,19 +276,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (!text) return;
 
             const comments = entry.comments || [];
-            const targetComment = comments.find(c => c.id === commentId);
-            if (targetComment) {
-                if (!targetComment.replies) targetComment.replies = [];
-                
-                const author = state.isAdmin ? "ADMIN" : (el.commentAuthor.value.trim() || "anonymous_dev");
-                targetComment.replies.push({
-                     id: 'r_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
-                     author: author,
-                     isAdmin: state.isAdmin,
-                     text: text,
-                     timestamp: new Date().toISOString()
-                });
+            
+            const author = state.isAdmin ? "ADMIN" : (el.commentAuthor.value.trim() || "anonymous_dev");
+            const newReply = {
+                id: 'r_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+                author: author,
+                isAdmin: state.isAdmin,
+                text: text,
+                timestamp: new Date().toISOString(),
+                replies: []
+            };
 
+            const inserted = insertReplyRecursive(comments, commentId, newReply);
+            if (inserted) {
+                entry.comments = comments;
                 await window.storageEngine.saveEntry(entry);
                 renderComments(entry);
             }
@@ -357,6 +402,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             title: "Globally Distributed Multi-Region Rate Limiter",
             category: "distributed",
             tags: "rate-limiting, redis, anycast",
+            author: "ADMIN",
             context: "Design a sub-millisecond API rate limiter deployed multi-region to safeguard internal cloud infrastructure controls.",
             topology: "flowchart TD\n    Client[Client Requests] --> Anycast[Anycast Proxy]\n    Anycast --> Envoy[Envoy Proxy Node Grid]",
             tradeoffs: "Local atomic loops reduce inter-region networking boundaries but sacrifice systemic consistency quotas.",
@@ -368,6 +414,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         for (const item of baseline) await window.storageEngine.saveEntry(item);
     };
 
+    const populateSplashSelect = () => {
+        if (!el.splashSelect) return;
+        el.splashSelect.innerHTML = '<option value="" disabled selected>-- SELECT SPEC --</option>';
+        state.entries.forEach(entry => {
+            const opt = document.createElement('option');
+            opt.value = entry.id;
+            opt.textContent = `${entry.id}: ${entry.title}`;
+            el.splashSelect.appendChild(opt);
+        });
+    };
+
     const syncWorkspaceData = async () => {
         state.entries = await window.storageEngine.getAllEntries();
         if (state.entries.length === 0) {
@@ -376,6 +433,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         updateStatusTelemetry();
         renderSidebarIndex();
+        populateSplashSelect();
     };
 
     const updateStatusTelemetry = () => {
@@ -397,7 +455,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const div = document.createElement('div');
             div.className = `question-item ${state.selectedId === item.id ? 'active' : ''}`;
             div.innerHTML = `
-                <div class="q-meta"><span>${item.id}</span><span>${item.modified}</span></div>
+                <div class="q-meta"><span>${item.id}</span><span>by ${escapeHtml(item.author || "ADMIN")}</span><span>${item.modified}</span></div>
                 <div class="q-title">${item.title}</div>
             `;
             div.onclick = () => selectActiveDocument(item.id);
@@ -405,7 +463,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
 
         if (filtered.length > 0 && !state.selectedId) {
-            selectActiveDocument(filtered[0].id);
+            clearDocumentCanvas();
         } else if (filtered.length === 0) {
             clearDocumentCanvas();
         }
@@ -419,7 +477,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         el.formPanel.classList.add('hidden');
         el.viewPanel.classList.remove('hidden');
 
+        if (el.welcomeSplash) el.welcomeSplash.classList.add('hidden');
+        if (el.viewWorkspace) el.viewWorkspace.classList.remove('hidden');
+
         el.docId.textContent = entry.id;
+        el.docAuthor.textContent = entry.author || "ADMIN";
         el.docModified.textContent = entry.modified;
         el.docTitle.textContent = entry.title;
         el.docContext.textContent = entry.context;
@@ -462,6 +524,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         el.docDeployment.parentElement.classList.add('hidden');
         el.docSecurity.parentElement.classList.add('hidden');
         if (el.commentsSection) el.commentsSection.classList.add('hidden');
+        
+        if (el.welcomeSplash) el.welcomeSplash.classList.remove('hidden');
+        if (el.viewWorkspace) el.viewWorkspace.classList.add('hidden');
     };
 
     // UI Input Routers
@@ -484,6 +549,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         el.formIsEdit.value = "false";
         el.formId.removeAttribute('readonly');
         el.formId.value = `SYS-${String(state.entries.length + 1).padStart(3, '0')}`;
+        el.formAuthor.value = 'ADMIN';
     });
 
     el.btnEdit.addEventListener('click', () => {
@@ -500,6 +566,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         el.formTitle.value = entry.title;
         el.formCategory.value = entry.category;
         el.formTags.value = entry.tags;
+        el.formAuthor.value = entry.author || 'ADMIN';
         el.formContext.value = entry.context;
         el.formTopology.value = entry.topology;
         el.formTradeoffs.value = entry.tradeoffs;
@@ -526,18 +593,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         clearInputError(el.formId);
         
+        // Preserve comments if editing existing specification
+        const existingEntry = state.entries.find(entry => entry.id === id);
+        const comments = existingEntry ? (existingEntry.comments || []) : [];
+
         const payload = {
             id: id,
             title: el.formTitle.value.trim(),
             category: el.formCategory.value,
             tags: el.formTags.value.trim(),
+            author: el.formAuthor.value.trim() || 'ADMIN',
             context: el.formContext.value.trim(),
             topology: el.formTopology.value,
             tradeoffs: el.formTradeoffs.value.trim(),
             observability: el.formObservability.value.trim(),
             deployment: el.formDeployment.value.trim(),
             security: el.formSecurity.value.trim(),
-            modified: new Date().toISOString().split('T')[0]
+            modified: new Date().toISOString().split('T')[0],
+            comments: comments
         };
 
         await window.storageEngine.saveEntry(payload);
@@ -618,6 +691,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         el.commentInput.value = '';
         renderComments(entry);
     });
+
+    if (el.splashSelect) {
+        el.splashSelect.addEventListener('change', (e) => {
+            const selectedId = e.target.value;
+            if (selectedId) {
+                selectActiveDocument(selectedId);
+                renderSidebarIndex();
+            }
+        });
+    }
 
     evaluateRoleUI();
     await syncWorkspaceData();
