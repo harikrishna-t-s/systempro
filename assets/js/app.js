@@ -80,14 +80,95 @@ document.addEventListener('DOMContentLoaded', async () => {
             el.statusDot.classList.remove('locked');
             el.adminControls.classList.remove('hidden');
             el.writeControls.classList.remove('hidden');
+            el.btnEdit.classList.remove('hidden');
+            el.btnDelete.classList.remove('hidden');
         } else {
             el.btnAuthToggle.textContent = "LOGIN_ADMIN";
             el.statusDot.classList.add('locked');
             el.adminControls.classList.add('hidden');
             el.writeControls.classList.add('hidden');
+            el.btnEdit.classList.add('hidden');
+            el.btnDelete.classList.add('hidden');
             // If user was viewing form panel, drop back safely to read-only view canvas
             el.formPanel.classList.add('hidden');
             el.viewPanel.classList.remove('hidden');
+        }
+    };
+
+    // Form Input Validation Helpers
+    const showInputError = (inputEl, message) => {
+        inputEl.classList.add('is-invalid');
+        const errorEl = document.getElementById(inputEl.id + 'Error');
+        if (errorEl) {
+            errorEl.textContent = message;
+            errorEl.style.display = 'block';
+        }
+    };
+
+    const clearInputError = (inputEl) => {
+        inputEl.classList.remove('is-invalid');
+        const errorEl = document.getElementById(inputEl.id + 'Error');
+        if (errorEl) {
+            errorEl.textContent = '';
+            errorEl.style.display = 'none';
+        }
+    };
+
+    // Initialize Mermaid if available
+    if (window.mermaid) {
+        window.mermaid.initialize({
+            startOnLoad: false,
+            theme: 'dark',
+            securityLevel: 'loose',
+            flowchart: { useMaxWidth: true, htmlLabels: true }
+        });
+    }
+
+    const isMermaidSyntax = (text) => {
+        if (!text) return false;
+        const trimmed = text.trim();
+        const keywords = [
+            'graph', 'flowchart', 'sequenceDiagram', 'classDiagram', 
+            'stateDiagram', 'erDiagram', 'gantt', 'pie', 
+            'gitGraph', 'C4Context', 'mindmap', 'timeline', 
+            'zenuml', 'architecture'
+        ];
+        const firstWord = trimmed.split(/[\s\n(]/)[0].toLowerCase();
+        return keywords.includes(firstWord);
+    };
+
+    const renderTopology = async (topologyText) => {
+        const docTopology = el.docTopology;
+        const docTopologyMermaid = document.getElementById('docTopologyMermaid');
+        
+        if (!topologyText || !topologyText.trim()) {
+            docTopology.parentElement.classList.add('hidden');
+            return;
+        }
+        
+        docTopology.parentElement.classList.remove('hidden');
+        
+        const isMermaid = isMermaidSyntax(topologyText) && window.mermaid;
+        if (isMermaid) {
+            docTopology.classList.add('hidden');
+            docTopologyMermaid.classList.remove('hidden');
+            docTopologyMermaid.innerHTML = '<div style="font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary);">Rendering topology model diagram...</div>';
+            
+            try {
+                docTopologyMermaid.innerHTML = '';
+                const uniqueId = 'mermaid-' + Math.random().toString(36).substring(2, 9);
+                const { svg } = await window.mermaid.render(uniqueId, topologyText.trim());
+                docTopologyMermaid.innerHTML = svg;
+            } catch (err) {
+                console.error("Mermaid parsing issue:", err);
+                docTopologyMermaid.classList.add('hidden');
+                docTopology.classList.remove('hidden');
+                docTopology.textContent = topologyText;
+            }
+        } else {
+            docTopologyMermaid.classList.add('hidden');
+            docTopology.classList.remove('hidden');
+            docTopology.textContent = topologyText;
         }
     };
 
@@ -133,7 +214,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             category: "distributed",
             tags: "rate-limiting, redis, anycast",
             context: "Design a sub-millisecond API rate limiter deployed multi-region to safeguard internal cloud infrastructure controls.",
-            topology: "[Client Requests] ---> [Anycast Proxy] ---> [Envoy Proxy Node Grid]",
+            topology: "flowchart TD\n    Client[Client Requests] --> Anycast[Anycast Proxy]\n    Anycast --> Envoy[Envoy Proxy Node Grid]",
             tradeoffs: "Local atomic loops reduce inter-region networking boundaries but sacrifice systemic consistency quotas.",
             observability: "Track rate_limiter.evaluation.latency_micros (p99.9 target < 850µs). Ensure multi-region synchronization lag alerts trigger above 5000ms thresholds.",
             deployment: "Canary rollout structured via progressive Envoy WASM filter upgrades. Automated fallback loops handle cross-region telemetry pipeline congestion dropouts.",
@@ -209,7 +290,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         };
 
-        mapBlock(entry.topology, el.docTopology);
+        renderTopology(entry.topology);
         mapBlock(entry.tradeoffs, el.docTradeoffs);
         mapBlock(entry.observability, el.docObservability);
         mapBlock(entry.deployment, el.docDeployment);
@@ -251,6 +332,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         el.viewPanel.classList.add('hidden');
         el.formPanel.classList.remove('hidden');
         el.entryForm.reset();
+        clearInputError(el.formId);
         el.formIsEdit.value = "false";
         el.formId.removeAttribute('readonly');
         el.formId.value = `SYS-${String(state.entries.length + 1).padStart(3, '0')}`;
@@ -263,6 +345,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         el.viewPanel.classList.add('hidden');
         el.formPanel.classList.remove('hidden');
+        clearInputError(el.formId);
         el.formIsEdit.value = "true";
         el.formId.value = entry.id;
         el.formId.setAttribute('readonly', 'true');
@@ -281,8 +364,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         e.preventDefault();
         if(!state.isAdmin) return alert("Security Block: Modification command barred.");
         
+        const isEdit = el.formIsEdit.value === "true";
+        const id = el.formId.value.trim().toUpperCase();
+        
+        // Form Validation: Duplicate ID Check for new entries
+        if (!isEdit) {
+            const existing = state.entries.find(entry => entry.id === id);
+            if (existing) {
+                showInputError(el.formId, `Verification Failure: ID "${id}" is already allocated.`);
+                return;
+            }
+        }
+        
+        clearInputError(el.formId);
+        
         const payload = {
-            id: el.formId.value.trim().toUpperCase(),
+            id: id,
             title: el.formTitle.value.trim(),
             category: el.formCategory.value,
             tags: el.formTags.value.trim(),
@@ -301,7 +398,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         selectActiveDocument(payload.id);
     });
 
-    el.cancelForm.addEventListener('click', () => { el.formPanel.classList.add('hidden'); el.viewPanel.classList.remove('hidden'); });
+    el.cancelForm.addEventListener('click', () => { 
+        clearInputError(el.formId);
+        el.formPanel.classList.add('hidden'); 
+        el.viewPanel.classList.remove('hidden'); 
+    });
+
+    // Convert Form ID to uppercase and clear errors in real-time
+    el.formId.addEventListener('input', (e) => {
+        e.target.value = e.target.value.toUpperCase();
+        clearInputError(el.formId);
+    });
 
     el.btnDelete.addEventListener('click', async () => {
         if(!state.isAdmin) return alert("Security Block: Modification command barred.");

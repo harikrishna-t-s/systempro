@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SYSTEMPRO // Core Architectural Workspace</title>
+    <title>SYSTEMPRO</title>
     <link rel="stylesheet" href="assets/css/main.css">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
 </head>
 <body>
 
@@ -79,6 +80,7 @@
                     <section class="doc-section hidden">
                         <h2>02. Component Topology Mapping</h2>
                         <pre class="architecture-diagram" id="docTopology"></pre>
+                        <div id="docTopologyMermaid" class="mermaid-container hidden"></div>
                     </section>
 
                     <section class="doc-section hidden">
@@ -117,7 +119,8 @@
                     <div class="form-group" style="display: flex; gap: 16px;">
                         <div style="flex: 1;">
                             <label for="formId">System ID Spec</label>
-                            <input type="text" id="formId" class="form-control" required>
+                            <input type="text" id="formId" class="form-control" placeholder="SYS-001" pattern="SYS-\d{3}" title="Format must be SYS- followed by 3 digits (e.g., SYS-001)" required>
+                            <div class="form-error-msg" id="formIdError"></div>
                         </div>
                         <div style="flex: 2;">
                             <label for="formCategory">Core Target Zone</label>
