@@ -38,7 +38,8 @@
                 <input type="file" id="fileImport" class="hidden" accept=".json">
             </span>
             <button class="btn btn-secondary" id="btnAuthToggle">LOGIN_ADMIN</button>
-            <span id="writeControls" class="hidden">
+            <span id="writeControls" class="hidden" style="display: flex; gap: 8px;">
+                <button class="btn btn-secondary" id="btnEditProfile">EDIT_PROFILE</button>
                 <button class="btn btn-primary" id="btnNewEntry">+ NEW_ENTRY</button>
             </span>
         </div>
@@ -62,15 +63,48 @@
 
         <main class="canvas-panel" id="viewPanel" style="padding: 0; overflow: hidden;">
             <div id="welcomeSplash" class="welcome-splash">
-                <div class="splash-logo">SYSTEMPRO</div>
-                <div class="splash-subtitle">EDGE.ROUTER.V2 // ARCHITECTURE INDEX</div>
-                <div class="splash-select-zone">
-                    <label for="splashSelect">SELECT_SPECIFICATION_STREAM:</label>
-                    <select id="splashSelect" class="form-control splash-select">
-                        <option value="" disabled selected>-- SELECT SPEC --</option>
-                    </select>
+                <div class="splash-first-fold">
+                    <div class="splash-logo">SYSTEMPRO</div>
+                    <div class="splash-subtitle">EDGE.ROUTER.V2 // ARCHITECTURE INDEX</div>
+                    <div class="splash-select-zone">
+                        <label for="splashSelect">SELECT_SPECIFICATION_STREAM:</label>
+                        <select id="splashSelect" class="form-control splash-select">
+                            <option value="" disabled selected>-- SELECT SPEC --</option>
+                        </select>
+                    </div>
+                    <div class="splash-hint">> SCROLL_DOWN_TO_VIEW_FOUNDER_PROFILE</div>
+                    <div class="scroll-arrow">↓</div>
                 </div>
-                <div class="splash-hint">> SELECT_METADATA_STREAM_FROM_SIDEBAR_TO_DECRYPT_SPEC</div>
+
+                <div class="splash-profile-section" id="splashProfile">
+                    <div class="profile-header">
+                        <div class="profile-photo-wrapper">
+                            <img id="founderPhoto" src="" alt="Founder Avatar" class="founder-photo hidden">
+                            <div id="founderPhotoPlaceholder" class="founder-photo-placeholder"></div>
+                        </div>
+                        <div class="profile-meta-zone">
+                            <h2 id="founderName" class="founder-name">FOUNDER PROFILE</h2>
+                            <p id="founderTitle" class="founder-title">SYSTEMS_ENGINEER // SITE_OWNER</p>
+                        </div>
+                    </div>
+
+                    <div class="profile-body">
+                        <div class="profile-section">
+                            <h3 class="profile-sec-title">01. ABOUT</h3>
+                            <div id="founderAbout" class="profile-sec-content"></div>
+                        </div>
+                        
+                        <div class="profile-section">
+                            <h3 class="profile-sec-title">02. WORK EXPERIENCE</h3>
+                            <div id="founderExperience" class="profile-sec-content"></div>
+                        </div>
+                        
+                        <div class="profile-section">
+                            <h3 class="profile-sec-title">03. CERTIFICATIONS & ACCOLADES</h3>
+                            <div id="founderCertifications" class="profile-sec-content"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div class="view-workspace hidden" id="viewWorkspace">
                 <article class="doc-container">
@@ -205,6 +239,54 @@
                     <div class="form-actions">
                         <button type="button" class="btn btn-secondary" id="cancelForm">ABORT</button>
                         <button type="submit" class="btn btn-primary" style="margin-left: 8px;">COMMIT_SPEC</button>
+                    </div>
+                </form>
+            </div>
+        </main>
+
+        <main class="canvas-panel hidden" id="profilePanel">
+            <div class="doc-container">
+                <div class="doc-header"><h1 class="doc-title">Founder Profile Configuration</h1></div>
+                <form id="profileForm">
+                    <div class="form-group" style="display: flex; gap: 16px; align-items: flex-start;">
+                        <div style="flex: 1;">
+                            <label for="profilePhotoInput">Profile Photo</label>
+                            <input type="file" id="profilePhotoInput" class="form-control" accept="image/*">
+                            <div class="profile-photo-preview-container" style="margin-top: 12px; display: flex; justify-content: center; border: 1px solid var(--border-primary); padding: 8px; border-radius: 4px; background-color: var(--bg-secondary);">
+                                <img id="profilePhotoPreview" src="" alt="Avatar Preview" class="profile-avatar-preview hidden" style="width: 96px; height: 96px; object-fit: cover; border-radius: 50%; border: 2px solid var(--border-focus);">
+                                <div id="profilePhotoPlaceholder" class="profile-avatar-placeholder" style="width: 96px; height: 96px; border-radius: 50%; border: 2px dashed var(--border-primary); display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);">NO_PHOTO</div>
+                            </div>
+                        </div>
+                        <div style="flex: 2; display: flex; flex-direction: column; gap: 20px;">
+                            <div>
+                                <label for="profileName">Founder Name</label>
+                                <input type="text" id="profileName" class="form-control" required>
+                            </div>
+                            <div>
+                                <label for="profileTitle">Professional Title / Tagline</label>
+                                <input type="text" id="profileTitle" class="form-control" placeholder="e.g. Systems Architect | Tech Lead" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="profileAbout">About Section (Markdown Supported)</label>
+                        <textarea id="profileAbout" rows="3" class="form-control" placeholder="Short professional summary..."></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="profileExperience">Work Experience (Markdown Supported)</label>
+                        <textarea id="profileExperience" rows="5" class="form-control" placeholder="### Senior Systems Engineer | Google (2024 - Present)&#10;- Architected globally distributed systems&#10;- Optimised cache boundaries"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="profileCertifications">Certifications & Awards (Markdown Supported)</label>
+                        <textarea id="profileCertifications" rows="3" class="form-control" placeholder="- Google Cloud Certified Professional Cloud Architect&#10;- AWS Solutions Architect Professional"></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" id="cancelProfileForm">ABORT</button>
+                        <button type="submit" class="btn btn-primary" style="margin-left: 8px;">COMMIT_PROFILE</button>
                     </div>
                 </form>
             </div>

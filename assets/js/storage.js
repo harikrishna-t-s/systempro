@@ -1,7 +1,7 @@
 class SystemProStorage {
     constructor() {
         this.dbName = 'SystemProDB';
-        this.version = 2; // Incremented schema iteration
+        this.version = 3; // Upgraded schema iteration for Founder Profile
         this.db = null;
     }
 
@@ -14,6 +14,9 @@ class SystemProStorage {
                 const db = event.target.result;
                 if (!db.objectStoreNames.contains('entries')) {
                     db.createObjectStore('entries', { keyPath: 'id' });
+                }
+                if (!db.objectStoreNames.contains('profile')) {
+                    db.createObjectStore('profile', { keyPath: 'id' });
                 }
             };
         });
@@ -44,6 +47,27 @@ class SystemProStorage {
             const transaction = this.db.transaction(['entries'], 'readwrite');
             const store = transaction.objectStore(['entries']);
             const request = store.delete(id);
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    getProfile() {
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction(['profile'], 'readonly');
+            const store = transaction.objectStore(['profile']);
+            const request = store.get('founder');
+            request.onsuccess = () => resolve(request.result || null);
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    saveProfile(profileData) {
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction(['profile'], 'readwrite');
+            const store = transaction.objectStore(['profile']);
+            profileData.id = 'founder';
+            const request = store.put(profileData);
             request.onsuccess = () => resolve();
             request.onerror = () => reject(request.error);
         });

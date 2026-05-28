@@ -74,11 +74,30 @@ document.addEventListener('DOMContentLoaded', async () => {
         commentsSection: document.getElementById('commentsSection'),
 
         // Splash screen and author element references
-        welcomeSplash: document.getElementById('welcomeSplash'),
-        viewWorkspace: document.getElementById('viewWorkspace'),
-        formAuthor: document.getElementById('formAuthor'),
         docAuthor: document.getElementById('docAuthor'),
-        splashSelect: document.getElementById('splashSelect')
+        splashSelect: document.getElementById('splashSelect'),
+
+        // Profile DOM nodes
+        profilePanel: document.getElementById('profilePanel'),
+        profileForm: document.getElementById('profileForm'),
+        profileName: document.getElementById('profileName'),
+        profileTitle: document.getElementById('profileTitle'),
+        profileAbout: document.getElementById('profileAbout'),
+        profileExperience: document.getElementById('profileExperience'),
+        profileCertifications: document.getElementById('profileCertifications'),
+        profilePhotoInput: document.getElementById('profilePhotoInput'),
+        profilePhotoPreview: document.getElementById('profilePhotoPreview'),
+        profilePhotoPlaceholder: document.getElementById('profilePhotoPlaceholder'),
+        cancelProfileForm: document.getElementById('cancelProfileForm'),
+        btnEditProfile: document.getElementById('btnEditProfile'),
+        
+        founderPhoto: document.getElementById('founderPhoto'),
+        founderPhotoPlaceholder: document.getElementById('founderPhotoPlaceholder'),
+        founderName: document.getElementById('founderName'),
+        founderTitle: document.getElementById('founderTitle'),
+        founderAbout: document.getElementById('founderAbout'),
+        founderExperience: document.getElementById('founderExperience'),
+        founderCertifications: document.getElementById('founderCertifications')
     };
 
     // Crypto Helper Engine
@@ -97,6 +116,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             el.writeControls.classList.remove('hidden');
             el.btnEdit.classList.remove('hidden');
             el.btnDelete.classList.remove('hidden');
+            if (el.btnEditProfile) el.btnEditProfile.classList.remove('hidden');
             if (el.commentAuthorSetup) {
                 el.commentAuthorSetup.classList.add('hidden');
                 el.commentAuthor.value = "ADMIN";
@@ -108,12 +128,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             el.writeControls.classList.add('hidden');
             el.btnEdit.classList.add('hidden');
             el.btnDelete.classList.add('hidden');
+            if (el.btnEditProfile) el.btnEditProfile.classList.add('hidden');
             if (el.commentAuthorSetup) {
                 el.commentAuthorSetup.classList.remove('hidden');
                 el.commentAuthor.value = "anonymous_dev";
             }
-            // If user was viewing form panel, drop back safely to read-only view canvas
+            // If user was viewing form panels, drop back safely to read-only view canvas
             el.formPanel.classList.add('hidden');
+            if (el.profilePanel) el.profilePanel.classList.add('hidden');
             el.viewPanel.classList.remove('hidden');
         }
     };
@@ -702,6 +724,139 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
+    // Markdown Parser implementation (bold, italic, list formatters)
+    const parseMarkdown = (text) => {
+        if (!text) return '';
+        let html = escapeHtml(text);
+        
+        // Bold parsing
+        html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        // Italic parsing
+        html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+        
+        // Headings (H3, H2, H1 tags)
+        html = html.replace(/^### (.*?)$/gm, '<h3>$1</h3>');
+        html = html.replace(/^## (.*?)$/gm, '<h2>$1</h2>');
+        html = html.replace(/^# (.*?)$/gm, '<h1>$1</h1>');
+        
+        // Bullet list points parser
+        html = html.replace(/^\s*-\s+(.*?)$/gm, '<li>$1</li>');
+        html = html.replace(/(<li>.*?<\/li>)/gs, '<ul>$1</ul>');
+        html = html.replace(/<\/ul>\s*<ul>/g, '');
+        
+        // Preserve standard line breaks
+        html = html.replace(/\n/g, '<br>');
+        return html;
+    };
+
+    // Render profile details to the DOM
+    const renderProfileToDOM = (profile) => {
+        el.founderName.textContent = profile.name;
+        el.founderTitle.textContent = profile.title;
+        
+        el.founderAbout.innerHTML = parseMarkdown(profile.about);
+        el.founderExperience.innerHTML = parseMarkdown(profile.experience);
+        el.founderCertifications.innerHTML = parseMarkdown(profile.certifications);
+        
+        if (profile.photo) {
+            el.founderPhoto.src = profile.photo;
+            el.founderPhoto.classList.remove('hidden');
+            el.founderPhotoPlaceholder.classList.add('hidden');
+        } else {
+            el.founderPhoto.classList.add('hidden');
+            el.founderPhotoPlaceholder.classList.remove('hidden');
+        }
+    };
+
+    const renderFounderProfile = async () => {
+        const profile = await window.storageEngine.getProfile();
+        if (!profile) {
+            // Seed a clean default baseline profile of the page founder
+            const defaultProfile = {
+                name: "Alex Rivera",
+                title: "Principal Infrastructure Architect",
+                photo: "",
+                about: "Systems engineer focused on distributed computing, high-performance database kernels, and telemetry fabrics.",
+                experience: "### Principal Architect | SYSTEMPRO (2025 - Present)\n- Architected client-side Single Page telemetry frameworks.\n- Implemented high-performance IndexedDB database wrappers.\n\n### Systems Engineer | Google (2021 - 2024)\n- Scaled globally distributed multi-region infrastructure controls.\n- Optimized Envoy reverse-proxy filters for high throughput workloads.",
+                certifications: "- Google Cloud Certified Professional Cloud Architect\n- AWS Certified Solutions Architect Professional"
+            };
+            await window.storageEngine.saveProfile(defaultProfile);
+            renderProfileToDOM(defaultProfile);
+        } else {
+            renderProfileToDOM(profile);
+        }
+    };
+
+    let profilePhotoBase64 = "";
+
+    // Base64 file uploader reader
+    el.profilePhotoInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                profilePhotoBase64 = event.target.result;
+                el.profilePhotoPreview.src = profilePhotoBase64;
+                el.profilePhotoPreview.classList.remove('hidden');
+                el.profilePhotoPlaceholder.classList.add('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    el.btnEditProfile.addEventListener('click', async () => {
+        if (!state.isAdmin) return alert("Unauthorized.");
+        
+        el.viewPanel.classList.add('hidden');
+        el.formPanel.classList.add('hidden');
+        el.profilePanel.classList.remove('hidden');
+        
+        const profile = await window.storageEngine.getProfile();
+        if (profile) {
+            el.profileName.value = profile.name;
+            el.profileTitle.value = profile.title;
+            el.profileAbout.value = profile.about || '';
+            el.profileExperience.value = profile.experience || '';
+            el.profileCertifications.value = profile.certifications || '';
+            profilePhotoBase64 = profile.photo || '';
+            
+            if (profilePhotoBase64) {
+                el.profilePhotoPreview.src = profilePhotoBase64;
+                el.profilePhotoPreview.classList.remove('hidden');
+                el.profilePhotoPlaceholder.classList.add('hidden');
+            } else {
+                el.profilePhotoPreview.classList.add('hidden');
+                el.profilePhotoPlaceholder.classList.remove('hidden');
+            }
+        }
+    });
+
+    el.cancelProfileForm.addEventListener('click', () => {
+        el.profilePanel.classList.add('hidden');
+        el.viewPanel.classList.remove('hidden');
+    });
+
+    el.profileForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!state.isAdmin) return alert("Unauthorized.");
+        
+        const payload = {
+            name: el.profileName.value.trim(),
+            title: el.profileTitle.value.trim(),
+            about: el.profileAbout.value.trim(),
+            experience: el.profileExperience.value.trim(),
+            certifications: el.profileCertifications.value.trim(),
+            photo: profilePhotoBase64
+        };
+
+        await window.storageEngine.saveProfile(payload);
+        await renderFounderProfile();
+        
+        el.profilePanel.classList.add('hidden');
+        el.viewPanel.classList.remove('hidden');
+    });
+
     evaluateRoleUI();
     await syncWorkspaceData();
+    await renderFounderProfile();
 });
