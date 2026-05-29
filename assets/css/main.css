@@ -14,6 +14,7 @@
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
 
 body {
     background-color: var(--bg-primary);
@@ -48,6 +49,24 @@ body {
     border: 1px solid var(--border-primary);
     padding: 2px 6px;
     border-radius: 3px;
+}
+
+.btn-home {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 1px;
+    color: var(--text-secondary);
+    background: transparent;
+    border: 1px solid var(--border-primary);
+    padding: 4px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: color 0.25s ease, border-color 0.25s ease, background-color 0.25s ease;
+}
+.btn-home:hover {
+    color: var(--text-primary);
+    border-color: var(--border-focus);
+    background-color: var(--bg-tertiary);
 }
 
 .meta-controls { display: flex; align-items: center; gap: 12px; }
@@ -127,7 +146,25 @@ body {
 /* Canvas Panels */
 .canvas-panel { flex: 1; background-color: var(--bg-primary); overflow-y: auto; padding: 40px; display: flex; justify-content: center; }
 .doc-container { max-width: 760px; width: 100%; }
-.hidden { display: none !important; }
+
+/* Animated panel transitions — replaces instant display:none toggling */
+.panel-transition {
+    transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1), transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 1;
+    transform: translateY(0);
+}
+.panel-transition.hidden {
+    opacity: 0;
+    transform: translateY(12px);
+    pointer-events: none;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+}
+
+/* Elements that still need instant hide (non-panel items) */
+.hidden:not(.panel-transition) { display: none !important; }
 
 /* Technical Context Subgrid Sections */
 .doc-header { margin-bottom: 32px; border-bottom: 1px solid var(--border-primary); padding-bottom: 24px; }
@@ -197,6 +234,19 @@ textarea.form-control { resize: vertical; font-family: var(--font-mono); font-si
     width: 100%;
     height: 100%;
     overflow: hidden;
+    /* Smooth content entrance */
+    transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1), transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 1;
+    transform: translateY(0);
+}
+.view-workspace.hidden {
+    opacity: 0;
+    transform: translateY(16px);
+    pointer-events: none;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
 }
 #viewPanel .doc-container {
     flex: 1;
@@ -361,7 +411,6 @@ textarea.form-control { resize: vertical; font-family: var(--font-mono); font-si
 }
 
 /* Typography Splash Screen & Nested Replies Styling */
-/* Typography Splash Screen & Nested Replies Styling */
 .welcome-splash {
     display: block;
     overflow-y: auto;
@@ -370,6 +419,26 @@ textarea.form-control { resize: vertical; font-family: var(--font-mono); font-si
     font-family: var(--font-mono);
     text-align: center;
     box-sizing: border-box;
+    scroll-behavior: smooth;
+    /* Hide scrollbar but keep scrolling */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+    /* Smooth fade transitions */
+    transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1), transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 1;
+    transform: scale(1);
+}
+.welcome-splash.hidden {
+    opacity: 0;
+    transform: scale(0.98);
+    pointer-events: none;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+}
+.welcome-splash::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
 }
 .splash-first-fold {
     display: flex;
@@ -557,5 +626,39 @@ textarea.form-control { resize: vertical; font-family: var(--font-mono); font-si
     border-color: var(--border-focus);
 }
 
-
-
+/* Global smooth interaction micro-transitions */
+.question-item {
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+.btn {
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+}
+.btn:active {
+    transform: scale(0.97);
+}
+.form-control {
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.form-control:focus {
+    box-shadow: 0 0 0 2px rgba(82, 82, 82, 0.2);
+}
+.tag-pill {
+    transition: color 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+}
+.sidebar {
+    transition: width 0.3s ease;
+}
+/* view-workspace transition is defined inline with its main rule */
+.comments-sidebar {
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.comment-list {
+    scroll-behavior: smooth;
+}
+.question-list {
+    scroll-behavior: smooth;
+}
+/* Smooth canvas-panel content scroll */
+.canvas-panel {
+    scroll-behavior: smooth;
+}

@@ -97,7 +97,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         founderTitle: document.getElementById('founderTitle'),
         founderAbout: document.getElementById('founderAbout'),
         founderExperience: document.getElementById('founderExperience'),
-        founderCertifications: document.getElementById('founderCertifications')
+        founderCertifications: document.getElementById('founderCertifications'),
+
+        // View switching elements
+        welcomeSplash: document.getElementById('welcomeSplash'),
+        viewWorkspace: document.getElementById('viewWorkspace')
     };
 
     // Crypto Helper Engine
@@ -476,11 +480,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         filtered.forEach(item => {
             const div = document.createElement('div');
             div.className = `question-item ${state.selectedId === item.id ? 'active' : ''}`;
+            div.dataset.id = item.id;
             div.innerHTML = `
                 <div class="q-meta"><span>${item.id}</span><span>by ${escapeHtml(item.author || "ADMIN")}</span><span>${item.modified}</span></div>
                 <div class="q-title">${item.title}</div>
             `;
-            div.onclick = () => selectActiveDocument(item.id);
             el.questionList.appendChild(div);
         });
 
@@ -559,6 +563,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         e.target.classList.add('active');
         state.currentFilter = e.target.getAttribute('data-filter');
         renderSidebarIndex();
+    });
+
+    // Delegated click handler for sidebar question items
+    el.questionList.addEventListener('click', (e) => {
+        const item = e.target.closest('.question-item');
+        if (!item) return;
+        const id = item.dataset.id;
+        if (id) {
+            selectActiveDocument(id);
+            renderSidebarIndex();
+        }
     });
 
     // Guard Form Operations against unauthorized mutation commands
