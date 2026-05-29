@@ -5,7 +5,7 @@
   "tags": "database, replication, raft, storage",
   "author": "ADMIN",
   "context": "A distributed, transactional storage system designed to achieve 99.999% uptime across five continental zones. Leverages a modified multi-raft consensus topology to manage synchronized state updates.",
-  "topology": "flowchart TD\n    US[US-East Leader] <--> EU[EU-West Follower]\n    US <--> AP[AP-South Follower]\n    EU <--> AP\n    US --> Disk[(NVMe Storage Cluster)]",
+  "topology": "US-East Leader --> EU-West Follower\nUS-East Leader --> AP-South Follower\nEU-West Follower --> AP-South Follower\nUS-East Leader --> NVMe Storage Cluster",
   "tradeoffs": "Under WAN network partitions, writes trade off strict linearizability to maintain partition tolerance (AP mode configuration). p99.9 write latency increases under heavy cross-continental consensus rounds.",
   "observability": "Track `storage.raft.consensus.round_trip_ms` (threshold alert > 120ms) and nvme queue depths using structured telemetry probes.",
   "deployment": "Progressive partition-by-partition database node updates. Auto-fencing rules isolate misbehaving raft group nodes during major partitions.",

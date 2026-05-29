@@ -400,70 +400,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         form.querySelector('.reply-input').focus();
     };
 
-    // Initialize Mermaid if available
-    if (window.mermaid) {
-        window.mermaid.initialize({
-            startOnLoad: false,
-            theme: 'dark',
-            securityLevel: 'loose',
-            flowchart: { useMaxWidth: true, htmlLabels: true }
-        });
-    }
-
-    const isMermaidSyntax = (text) => {
-        if (!text) return false;
-        const cleanText = text
-            .split('\n')
-            .map(line => line.trim())
-            .filter(line => !line.startsWith('%%'))
-            .join('\n')
-            .trim();
-            
-        if (!cleanText) return false;
-        
-        const keywords = [
-            'graph', 'flowchart', 'sequenceDiagram', 'classDiagram', 
-            'stateDiagram', 'erDiagram', 'gantt', 'pie', 
-            'gitGraph', 'C4Context', 'mindmap', 'timeline', 
-            'zenuml', 'architecture'
-        ];
-        const firstWord = cleanText.split(/[\s\n(]/)[0].toLowerCase();
-        return keywords.includes(firstWord);
-    };
-
-    const renderTopology = async (topologyText) => {
+    const renderTopology = (topologyText) => {
         const docTopology = el.docTopology;
-        const docTopologyMermaid = document.getElementById('docTopologyMermaid');
-        
+
         if (!topologyText || !topologyText.trim()) {
             docTopology.parentElement.classList.add('hidden');
             return;
         }
-        
+
         docTopology.parentElement.classList.remove('hidden');
-        
-        const isMermaid = isMermaidSyntax(topologyText) && window.mermaid;
-        if (isMermaid) {
-            docTopology.classList.add('hidden');
-            docTopologyMermaid.classList.remove('hidden');
-            docTopologyMermaid.innerHTML = '<div style="font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary);">Rendering topology model diagram...</div>';
-            
-            try {
-                docTopologyMermaid.innerHTML = '';
-                const uniqueId = 'mermaid-' + Math.random().toString(36).substring(2, 9);
-                const { svg } = await window.mermaid.render(uniqueId, topologyText.trim());
-                docTopologyMermaid.innerHTML = svg;
-            } catch (err) {
-                console.error("Mermaid parsing issue:", err);
-                docTopologyMermaid.classList.add('hidden');
-                docTopology.classList.remove('hidden');
-                docTopology.textContent = topologyText;
-            }
-        } else {
-            docTopologyMermaid.classList.add('hidden');
-            docTopology.classList.remove('hidden');
-            docTopology.textContent = topologyText;
-        }
+        docTopology.textContent = topologyText;
     };
 
     // Authentication Handshaking

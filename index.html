@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SYSTEMPRO</title>
     <link rel="stylesheet" href="assets/css/main.css">
-    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
 </head>
 <body>
 
@@ -94,7 +93,6 @@
                             <section class="doc-section hidden">
                                 <h2>02. Component Topology Mapping</h2>
                                 <pre class="architecture-diagram" id="docTopology"></pre>
-                                <div id="docTopologyMermaid" class="mermaid-container hidden"></div>
                             </section>
 
                             <section class="doc-section hidden">
@@ -211,6 +209,12 @@
         </main>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // Supabase centralized connection credentials
+        window.SUPABASE_URL = "";
+        window.SUPABASE_ANON_KEY = "";
+    </script>
     <script src="assets/js/storage.js"></script>
     <script src="assets/js/app.js"></script>
 </body>
