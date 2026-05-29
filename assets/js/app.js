@@ -116,6 +116,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             el.formPanel.classList.add('hidden');
             el.viewPanel.classList.remove('hidden');
         }
+        // Force refresh comments UI to show/hide admin purge actions
+        if (state.selectedId) {
+            const entry = state.entries.find(e => e.id === state.selectedId);
+            if (entry) renderComments(entry);
+        }
     };
 
     // Form Input Validation Helpers
@@ -148,6 +153,94 @@ document.addEventListener('DOMContentLoaded', async () => {
             .replace(/'/g, "&#039;");
     };
 
+    // Lightweight HTML-safe Markdown parser
+    const parseMarkdown = (text) => {
+        if (!text) return '';
+        let html = escapeHtml(text);
+        
+        // Inline code: `code`
+        html = html.replace(/`(.*?)`/g, '<code class="inline-code">$1</code>');
+        
+        // Bold: **text**
+        html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        
+        // Italic: *text*
+        html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+        
+        // Lists: lines starting with "- " or "* "
+        const lines = html.split('\n');
+        let inList = false;
+        const processedLines = lines.map(line => {
+            const trimmed = line.trim();
+            if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+                const content = trimmed.substring(2);
+                let prefix = '';
+                if (!inList) {
+                    inList = true;
+                    prefix = '<ul class="doc-list">';
+                }
+                return prefix + `<li>${content}</li>`;
+            } else {
+                let prefix = '';
+                if (inList) {
+                    inList = false;
+                    prefix = '</ul>';
+                }
+                return prefix + line;
+            }
+        });
+        if (inList) {
+            processedLines.push('</ul>');
+        }
+        return processedLines.join('<br>');
+    };
+
+    // Safe Import Schema Checker & Normalizer
+    const validateAndSanitizeEntry = (item) => {
+        if (!item || typeof item !== 'object') return null;
+        if (!item.id || typeof item.id !== 'string' || !/^SYS-\d{3,4}$/.test(item.id)) return null;
+        if (!item.title || typeof item.title !== 'string') return null;
+        
+        const validCategories = ['distributed', 'storage', 'telemetry', 'compute'];
+        let category = item.category;
+        if (!validCategories.includes(category)) {
+            category = 'distributed';
+        }
+        
+        const sanitizeComments = (comments) => {
+            if (!Array.isArray(comments)) return [];
+            return comments.map(c => {
+                if (!c || typeof c !== 'object') return null;
+                return {
+                    id: c.id || ('c_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7)),
+                    author: typeof c.author === 'string' ? c.author.trim() : 'anonymous_dev',
+                    isAdmin: !!c.isAdmin,
+                    text: typeof c.text === 'string' ? c.text.trim() : '',
+                    timestamp: typeof c.timestamp === 'string' ? c.timestamp : new Date().toISOString(),
+                    replies: Array.isArray(c.replies) ? sanitizeComments(c.replies) : []
+                };
+            }).filter(Boolean);
+        };
+
+        return {
+            id: item.id.toUpperCase(),
+            title: item.title.trim(),
+            category: category,
+            tags: typeof item.tags === 'string' ? item.tags.trim() : '',
+            author: typeof item.author === 'string' ? item.author.trim() : 'ADMIN',
+            context: typeof item.context === 'string' ? item.context.trim() : '',
+            topology: typeof item.topology === 'string' ? item.topology : '',
+            tradeoffs: typeof item.tradeoffs === 'string' ? item.tradeoffs.trim() : '',
+            observability: typeof item.observability === 'string' ? item.observability.trim() : '',
+            deployment: typeof item.deployment === 'string' ? item.deployment.trim() : '',
+            security: typeof item.security === 'string' ? item.security.trim() : '',
+            modified: typeof item.modified === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(item.modified)
+                ? item.modified 
+                : new Date().toISOString().split('T')[0],
+            comments: sanitizeComments(item.comments)
+        };
+    };
+
     const deleteCommentRecursive = (nodes, targetId) => {
         for (let i = 0; i < nodes.length; i++) {
             if (nodes[i].id === targetId) {
@@ -177,9 +270,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         return false;
     };
 
-    const createCommentElement = (comment, entry) => {
+    const createCommentElement = (comment, entry, depth = 0, parentAuthor = null) => {
         const div = document.createElement('div');
-        div.className = 'comment-item';
+        div.className = `comment-item ${depth > 0 ? 'reply-item' : ''} ${depth >= 2 ? 'flat-nesting' : ''}`;
         div.id = `item-${comment.id}`;
 
         const date = new Date(comment.timestamp).toLocaleString();
@@ -187,6 +280,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         const deleteBtnHTML = state.isAdmin 
             ? `<button class="comment-action-btn btn-delete-comment" data-comment-id="${comment.id}" style="color: var(--accent-error);">[ PURGE ]</button>`
+            : '';
+
+        const replyTag = (depth >= 2 && parentAuthor) 
+            ? `<span class="reply-tag">@${escapeHtml(parentAuthor)}</span> ` 
             : '';
 
         div.innerHTML = `
@@ -197,7 +294,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
                 <span class="comment-time">${date}</span>
             </div>
-            <div class="comment-body">${escapeHtml(comment.text)}</div>
+            <div class="comment-body">${replyTag}${parseMarkdown(comment.text)}</div>
             <div class="comment-actions">
                 <button class="comment-action-btn btn-reply" data-comment-id="${comment.id}">[ REPLY ]</button>
                 ${deleteBtnHTML}
@@ -211,7 +308,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (comment.replies && comment.replies.length > 0) {
             repliesContainer.style.display = 'flex';
             comment.replies.forEach(child => {
-                const childEl = createCommentElement(child, entry);
+                const childEl = createCommentElement(child, entry, depth + 1, comment.author);
                 repliesContainer.appendChild(childEl);
             });
         } else {
@@ -315,14 +412,22 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const isMermaidSyntax = (text) => {
         if (!text) return false;
-        const trimmed = text.trim();
+        const cleanText = text
+            .split('\n')
+            .map(line => line.trim())
+            .filter(line => !line.startsWith('%%'))
+            .join('\n')
+            .trim();
+            
+        if (!cleanText) return false;
+        
         const keywords = [
             'graph', 'flowchart', 'sequenceDiagram', 'classDiagram', 
             'stateDiagram', 'erDiagram', 'gantt', 'pie', 
             'gitGraph', 'C4Context', 'mindmap', 'timeline', 
             'zenuml', 'architecture'
         ];
-        const firstWord = trimmed.split(/[\s\n(]/)[0].toLowerCase();
+        const firstWord = cleanText.split(/[\s\n(]/)[0].toLowerCase();
         return keywords.includes(firstWord);
     };
 
@@ -397,21 +502,101 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     const seedSystemData = async () => {
-        const baseline = [{
-            id: "SYS-001",
-            title: "Globally Distributed Multi-Region Rate Limiter",
-            category: "distributed",
-            tags: "rate-limiting, redis, anycast",
-            author: "ADMIN",
-            context: "Design a sub-millisecond API rate limiter deployed multi-region to safeguard internal cloud infrastructure controls.",
-            topology: "flowchart TD\n    Client[Client Requests] --> Anycast[Anycast Proxy]\n    Anycast --> Envoy[Envoy Proxy Node Grid]",
-            tradeoffs: "Local atomic loops reduce inter-region networking boundaries but sacrifice systemic consistency quotas.",
-            observability: "Track rate_limiter.evaluation.latency_micros (p99.9 target < 850µs). Ensure multi-region synchronization lag alerts trigger above 5000ms thresholds.",
-            deployment: "Canary rollout structured via progressive Envoy WASM filter upgrades. Automated fallback loops handle cross-region telemetry pipeline congestion dropouts.",
-            security: "Edge layers validate JWT client signatures before processing rate limits. Block malicious clients at upstream cloud firewalls via dynamic IP bans.",
-            modified: "2026-05-27"
-        }];
+        const baseline = [
+            {
+                id: "SYS-001",
+                title: "Globally Distributed Multi-Region Rate Limiter",
+                category: "distributed",
+                tags: "rate-limiting, redis, anycast",
+                author: "ADMIN",
+                context: "Design a sub-millisecond API rate limiter deployed multi-region to safeguard internal cloud infrastructure controls.",
+                topology: "flowchart TD\n    Client[Client Requests] --> Anycast[Anycast Proxy]\n    Anycast --> Envoy[Envoy Proxy Node Grid]",
+                tradeoffs: "Local atomic loops reduce inter-region networking boundaries but sacrifice systemic consistency quotas.",
+                observability: "Track rate_limiter.evaluation.latency_micros (p99.9 target < 850µs). Ensure multi-region synchronization lag alerts trigger above 5000ms thresholds.",
+                deployment: "Canary rollout structured via progressive Envoy WASM filter upgrades. Automated fallback loops handle cross-region telemetry pipeline congestion dropouts.",
+                security: "Edge layers validate JWT client signatures before processing rate limits. Block malicious clients at upstream cloud firewalls via dynamic IP bans.",
+                modified: "2026-05-27",
+                comments: []
+            },
+            {
+                id: "SYS-002",
+                title: "Globally Replicated High-Availability Datastore",
+                category: "storage",
+                tags: "database, replication, raft, storage",
+                author: "ADMIN",
+                context: "A distributed, transactional storage system designed to achieve 99.999% uptime across five continental zones. Leverages a modified multi-raft consensus topology to manage synchronized state updates.",
+                topology: "flowchart TD\n    US[US-East Leader] <--> EU[EU-West Follower]\n    US <--> AP[AP-South Follower]\n    EU <--> AP\n    US --> Disk[(NVMe Storage Cluster)]",
+                tradeoffs: "Under WAN network partitions, writes trade off strict linearizability to maintain partition tolerance (AP mode configuration). p99.9 write latency increases under heavy cross-continental consensus rounds.",
+                observability: "Track `storage.raft.consensus.round_trip_ms` (threshold alert > 120ms) and nvme queue depths using structured telemetry probes.",
+                deployment: "Progressive partition-by-partition database node updates. Auto-fencing rules isolate misbehaving raft group nodes during major partitions.",
+                security: "Enforce mTLS with hardware security modules (HSM) key certificates between cluster datacenters. Full static-data AES-256 block encryption at the block device layer.",
+                modified: "2026-05-29",
+                comments: [
+                    {
+                        id: "c_init_1",
+                        author: "storage_lead",
+                        isAdmin: false,
+                        text: "Have we verified consistency behaviors during long-term split-brain scenarios?",
+                        timestamp: "2026-05-29T10:00:00.000Z",
+                        replies: [
+                            {
+                                id: "r_init_1",
+                                author: "ADMIN",
+                                isAdmin: true,
+                                text: "Yes. Chaos tests with Network Partition injectors show raft election loops isolate minority blocks within 1500ms, preserving state integrity.",
+                                timestamp: "2026-05-29T10:15:00.000Z",
+                                replies: []
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: "SYS-003",
+                title: "Ultra-Low Latency Telemetry Processing Grid",
+                category: "telemetry",
+                tags: "telemetry, pipeline, zero-copy, compute",
+                author: "ADMIN",
+                context: "A high-performance pipeline architecture processing up to 10M events/second of structural metadata metrics. Implemented in Rust using Ring Buffers and shared memory segments for zero-copy transfers.",
+                topology: "flowchart LR\n    Probes[System Probes] --> Ring[Shared Ring Buffer]\n    Ring --> Aggregator[Aggregator Daemons]\n    Aggregator --> ClickHouse[(ClickHouse DB Cluster)]",
+                tradeoffs: "Ring buffer size defines maximum transient metric bursts. Spikes exceeding allocation will experience drop-tail policies, discarding old telemetry rather than blocking core engine rings.",
+                observability: "Alert on `pipeline.tail_drop.drops_count` > 0 within a 1-minute window. Graph buffer saturation percentage dynamically.",
+                deployment: "Canary updates run on 5% of host telemetry rings. Reverts trigger instantly if agent ring buffer read latencies spike above 50µs.",
+                security: "System probes run as unprivileged users inside sandboxed eBPF runtimes. Shared memory segments locked down via strict POSIX permissions.",
+                modified: "2026-05-29",
+                comments: []
+            }
+        ];
         for (const item of baseline) await window.storageEngine.saveEntry(item);
+    };
+
+    const importDataFromDirectory = async () => {
+        try {
+            const manifestResponse = await fetch('data/manifest.json');
+            if (!manifestResponse.ok) {
+                console.log("No data directory manifest.json found or server is offline.");
+                return;
+            }
+            const files = await manifestResponse.json();
+            if (Array.isArray(files)) {
+                for (const filename of files) {
+                    try {
+                        const fileResponse = await fetch(`data/${filename}`);
+                        if (fileResponse.ok) {
+                            const item = await fileResponse.json();
+                            const sanitized = validateAndSanitizeEntry(item);
+                            if (sanitized) {
+                                await window.storageEngine.saveEntry(sanitized);
+                            }
+                        }
+                    } catch (e) {
+                        console.error(`Error loading JSON file data/${filename}:`, e);
+                    }
+                }
+            }
+        } catch (err) {
+            console.warn("Could not load data folder files dynamically:", err.message);
+        }
     };
 
     const populateSplashSelect = () => {
@@ -426,6 +611,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     const syncWorkspaceData = async () => {
+        // Load external specifications dynamically if manifest is set up
+        await importDataFromDirectory();
+
         state.entries = await window.storageEngine.getAllEntries();
         if (state.entries.length === 0) {
             await seedSystemData();
@@ -447,7 +635,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const matchesCategory = state.currentFilter === 'all_systems' || item.category === state.currentFilter;
             const matchesSearch = item.title.toLowerCase().includes(state.searchQuery.toLowerCase()) || 
                                   item.id.toLowerCase().includes(state.searchQuery.toLowerCase()) ||
-                                  item.tags.toLowerCase().includes(state.searchQuery.toLowerCase());
+                                  (item.tags || '').toLowerCase().includes(state.searchQuery.toLowerCase());
             return matchesCategory && matchesSearch;
         });
 
@@ -484,12 +672,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         el.docAuthor.textContent = entry.author || "ADMIN";
         el.docModified.textContent = entry.modified;
         el.docTitle.textContent = entry.title;
-        el.docContext.textContent = entry.context;
+        el.docContext.innerHTML = parseMarkdown(entry.context);
         
         // Structural Render Mapping
         const mapBlock = (field, domTarget) => {
             if (field && field.trim()) {
-                domTarget.textContent = field;
+                domTarget.innerHTML = parseMarkdown(field);
                 domTarget.parentElement.classList.remove('hidden');
             } else {
                 domTarget.parentElement.classList.add('hidden');
@@ -503,7 +691,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         mapBlock(entry.security, el.docSecurity);
 
         el.docTags.innerHTML = '';
-        entry.tags.split(',').map(t => t.trim()).filter(Boolean).forEach(t => {
+        (entry.tags || '').split(',').map(t => t.trim()).filter(Boolean).forEach(t => {
             const span = document.createElement('span');
             span.className = 'doc-tag';
             span.textContent = t;
@@ -527,6 +715,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         if (el.welcomeSplash) el.welcomeSplash.classList.remove('hidden');
         if (el.viewWorkspace) el.viewWorkspace.classList.add('hidden');
+
+        if (el.splashSelect) {
+            el.splashSelect.value = '';
+        }
     };
 
     // UI Input Routers
@@ -548,7 +740,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         clearInputError(el.formId);
         el.formIsEdit.value = "false";
         el.formId.removeAttribute('readonly');
-        el.formId.value = `SYS-${String(state.entries.length + 1).padStart(3, '0')}`;
+        
+        // Dynamically compute the next available SYS-XXX ID
+        let nextNum = 1;
+        if (state.entries && state.entries.length > 0) {
+            const numbers = state.entries
+                .map(entry => {
+                    const match = entry.id.match(/^SYS-(\d+)$/i);
+                    return match ? parseInt(match[1], 10) : 0;
+                });
+            const maxNum = Math.max(...numbers, 0);
+            nextNum = maxNum + 1;
+        }
+        el.formId.value = `SYS-${String(nextNum).padStart(3, '0')}`;
         el.formAuthor.value = 'ADMIN';
     });
 
@@ -659,10 +863,24 @@ document.addEventListener('DOMContentLoaded', async () => {
             try {
                 const parsed = JSON.parse(event.target.result);
                 if (Array.isArray(parsed)) {
-                    for (const item of parsed) if (item.id) await window.storageEngine.saveEntry(item);
-                    await syncWorkspaceData();
+                    let importedCount = 0;
+                    for (const item of parsed) {
+                        const sanitized = validateAndSanitizeEntry(item);
+                        if (sanitized) {
+                            await window.storageEngine.saveEntry(sanitized);
+                            importedCount++;
+                        }
+                    }
+                    if (importedCount > 0) {
+                        await syncWorkspaceData();
+                        alert(`Successfully verified and imported ${importedCount} specification records.`);
+                    } else {
+                        alert("Import failed: No valid specification items found.");
+                    }
+                } else {
+                    alert("Import failed: JSON must be an array of specifications.");
                 }
-            } catch (err) { alert("Data structural trace initialization fault."); }
+            } catch (err) { alert("Data structural trace initialization fault: " + err.message); }
         };
         if (e.target.files[0]) reader.readAsText(e.target.files[0]);
     });

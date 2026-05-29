@@ -1,0 +1,33 @@
+{
+  "id": "SYS-002",
+  "title": "Globally Replicated High-Availability Datastore",
+  "category": "storage",
+  "tags": "database, replication, raft, storage",
+  "author": "ADMIN",
+  "context": "A distributed, transactional storage system designed to achieve 99.999% uptime across five continental zones. Leverages a modified multi-raft consensus topology to manage synchronized state updates.",
+  "topology": "flowchart TD\n    US[US-East Leader] <--> EU[EU-West Follower]\n    US <--> AP[AP-South Follower]\n    EU <--> AP\n    US --> Disk[(NVMe Storage Cluster)]",
+  "tradeoffs": "Under WAN network partitions, writes trade off strict linearizability to maintain partition tolerance (AP mode configuration). p99.9 write latency increases under heavy cross-continental consensus rounds.",
+  "observability": "Track `storage.raft.consensus.round_trip_ms` (threshold alert > 120ms) and nvme queue depths using structured telemetry probes.",
+  "deployment": "Progressive partition-by-partition database node updates. Auto-fencing rules isolate misbehaving raft group nodes during major partitions.",
+  "security": "Enforce mTLS with hardware security modules (HSM) key certificates between cluster datacenters. Full static-data AES-256 block encryption at the block device layer.",
+  "modified": "2026-05-29",
+  "comments": [
+    {
+      "id": "c_init_1",
+      "author": "storage_lead",
+      "isAdmin": false,
+      "text": "Have we verified consistency behaviors during long-term split-brain scenarios?",
+      "timestamp": "2026-05-29T10:00:00.000Z",
+      "replies": [
+        {
+          "id": "r_init_1",
+          "author": "ADMIN",
+          "isAdmin": true,
+          "text": "Yes. Chaos tests with Network Partition injectors show raft election loops isolate minority blocks within 1500ms, preserving state integrity.",
+          "timestamp": "2026-05-29T10:15:00.000Z",
+          "replies": []
+        }
+      ]
+    }
+  ]
+}

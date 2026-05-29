@@ -1,0 +1,15 @@
+{
+  "id": "SYS-100",
+  "title": "System Specification Architecture Title",
+  "category": "distributed",
+  "tags": "comma, separated, tags",
+  "author": "ADMIN",
+  "context": "Comprehensive context describing architectural boundaries.",
+  "topology": "flowchart TD\n    A[Component A] --> B[Component B]",
+  "tradeoffs": "Description of critical architectural and operational tradeoffs.",
+  "observability": "SLIs, telemetry probes, alerts thresholds, and tracing scopes.",
+  "deployment": "Canary rollouts steps and failure recovery runbooks.",
+  "security": "Threat boundary mitigations and security configurations.",
+  "modified": "2026-05-29",
+  "comments": []
+}

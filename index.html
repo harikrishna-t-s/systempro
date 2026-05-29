@@ -151,7 +151,7 @@
                     <div class="form-group" style="display: flex; gap: 16px;">
                         <div style="flex: 1;">
                             <label for="formId">System ID Spec</label>
-                            <input type="text" id="formId" class="form-control" placeholder="SYS-001" pattern="SYS-\d{3}" title="Format must be SYS- followed by 3 digits (e.g., SYS-001)" required>
+                            <input type="text" id="formId" class="form-control" placeholder="SYS-001" pattern="SYS-\d{3,4}" title="Format must be SYS- followed by 3 or 4 digits (e.g., SYS-001 or SYS-1000)" required>
                             <div class="form-error-msg" id="formIdError"></div>
                         </div>
                         <div style="flex: 2;">
