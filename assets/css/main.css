@@ -44,7 +44,7 @@ body {
 }
 
 .brand-zone { display: flex; align-items: center; gap: 16px; }
-.logo { font-family: var(--font-mono); font-weight: 700; letter-spacing: 2px; }
+.logo { font-family: var(--font-sans); font-weight: 700; letter-spacing: 2px; }
 .environment-badge {
     font-family: var(--font-mono);
     font-size: 11px;
@@ -68,7 +68,7 @@ body {
 
 /* Buttons */
 .btn {
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-size: 11px;
     font-weight: 600;
     padding: 5px 12px;
@@ -121,6 +121,9 @@ body {
     border-right: 1px solid var(--border-primary);
     display: flex;
     flex-direction: column;
+    font-family: var(--font-sans);
+    font-size: 13px;
+    color: var(--text-primary);
 }
 .search-box { padding: 12px; border-bottom: 1px solid var(--border-primary); }
 .search-input {
@@ -129,8 +132,8 @@ body {
     border: 1px solid var(--border-primary);
     padding: 8px 12px;
     border-radius: 4px;
-    font-family: var(--font-mono);
-    font-size: 12px;
+    font-family: var(--font-sans);
+    font-size: 13px;
     color: var(--text-primary);
 }
 .search-input:focus { outline: none; border-color: var(--border-focus); }
@@ -138,8 +141,8 @@ body {
 .filter-tags { padding: 8px 12px; display: flex; gap: 6px; overflow-x: auto; border-bottom: 1px solid var(--border-primary); }
 .filter-tags::-webkit-scrollbar { display: none; }
 .tag-pill {
-    font-family: var(--font-mono);
-    font-size: 11px;
+    font-family: var(--font-sans);
+    font-size: 13px;
     color: var(--text-secondary);
     border: 1px solid var(--border-primary);
     padding: 2px 8px;
@@ -151,6 +154,8 @@ body {
 
 .question-list { flex: 1; overflow-y: auto; }
 .question-item { 
+    font-family: var(--font-sans);
+    font-size: 13px;
     padding: 14px 16px; 
     border-bottom: 1px solid var(--border-primary); 
     cursor: pointer; 
@@ -168,7 +173,7 @@ body {
     box-shadow: inset 4px 0 10px -4px rgba(255, 255, 255, 0.05);
 }
 
-.q-meta { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); margin-bottom: 4px; display: flex; justify-content: space-between; }
+.q-meta { font-family: var(--font-sans); font-size: 11px; color: var(--text-muted); margin-bottom: 4px; display: flex; justify-content: space-between; }
 .q-title { font-weight: 500; color: var(--text-primary); font-size: 13px; line-height: 1.4; }
 
 /* Canvas Panels */
