@@ -1,0 +1,15 @@
+{
+  "id": "SYS-003",
+  "title": "Ultra-Low Latency Telemetry Processing Grid",
+  "category": "telemetry",
+  "tags": "telemetry, pipeline, zero-copy, compute",
+  "author": "ADMIN",
+  "context": "A high-performance pipeline architecture processing up to 10M events/second of structural metadata metrics. Implemented in Rust using Ring Buffers and shared memory segments for zero-copy transfers.",
+  "topology": "flowchart LR\n    Probes[System Probes] --> Ring[Shared Ring Buffer]\n    Ring --> Aggregator[Aggregator Daemons]\n    Aggregator --> ClickHouse[(ClickHouse DB Cluster)]",
+  "tradeoffs": "Ring buffer size defines maximum transient metric bursts. Spikes exceeding allocation will experience drop-tail policies, discarding old telemetry rather than blocking core engine rings.",
+  "observability": "Alert on `pipeline.tail_drop.drops_count` > 0 within a 1-minute window. Graph buffer saturation percentage dynamically.",
+  "deployment": "Canary updates run on 5% of host telemetry rings. Reverts trigger instantly if agent ring buffer read latencies spike above 50µs.",
+  "security": "System probes run as unprivileged users inside sandboxed eBPF runtimes. Shared memory segments locked down via strict POSIX permissions.",
+  "modified": "2026-05-29",
+  "comments": []
+}
